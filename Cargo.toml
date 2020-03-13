@@ -1,0 +1,15 @@
+[package]
+name = "micro-tokio-compat"
+version = "0.1.0"
+authors = ["Alexander Polakov <a.polakov@iconic.vc>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+futures_01 = { package = "futures", version = "0.1" }
+tokio-executor_01 = { package = "tokio-executor", version = "0.1" }
+tokio_02 = { package = "tokio", version = "0.2", default_features = false, features = ["rt-core", "rt-util", "time", "sync", "stream", "io-driver"] }
+futures-03-core = { package = "futures-core", version = "0.3.1" }
+futures-util = { version = "0.3.1", default-features = false, features = ["compat"] }
+tokio-timer_02 = { package = "tokio-timer", version = "0.2" }
