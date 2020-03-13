@@ -449,3 +449,18 @@ impl Runtime {
         })
     }
 }
+
+/// Start a current-thread runtime using the supplied `futures` 0.1 future to bootstrap execution.
+///
+/// # Panics
+///
+/// This function panics if called from the context of an executor.
+#[cfg_attr(docsrs, doc(cfg(feature = "rt-current-thread")))]
+pub fn run<F>(future: F)
+where
+    F: Future01<Item = (), Error = ()> + 'static,
+{
+    let mut r = Runtime::new().expect("failed to start runtime on current thread");
+    r.spawn(future);
+    r.run().expect("failed to resolve remaining futures");
+}
