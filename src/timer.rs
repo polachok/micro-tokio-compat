@@ -11,6 +11,8 @@ use tokio_02::time::Delay as Delay2;
 use tokio_02::time::Instant;
 use tokio_02::time::Interval as Interval2;
 
+pub use crate::timeout::Timeout;
+
 struct PhantomError<S, E> {
     phantom: PhantomData<fn() -> E>,
     inner: S,
