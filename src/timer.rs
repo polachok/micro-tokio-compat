@@ -1,4 +1,3 @@
-
 use futures_01::future::Future as Future01;
 use futures_01::stream::Stream as Stream01;
 use futures_01::Poll as Poll01;
@@ -8,8 +7,9 @@ use std::marker::PhantomData;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use tokio_02::time::Delay as Delay2;
-use tokio_02::time::Instant;
 use tokio_02::time::Interval as Interval2;
+
+pub use tokio_02::time::Instant;
 
 pub use crate::timeout::Timeout;
 
