@@ -10,6 +10,7 @@ use tokio_02::time::Delay as Delay2;
 use tokio_02::time::Interval as Interval2;
 
 pub use tokio_02::time::Instant;
+pub use tokio_timer_02::Error;
 
 pub use crate::timeout::Timeout;
 
