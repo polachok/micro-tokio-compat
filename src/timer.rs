@@ -23,6 +23,10 @@ impl<S, E> PhantomError<S, E> {
     fn get_mut(&mut self) -> &mut S {
         &mut self.inner
     }
+
+    fn get(&self) -> &S {
+        &self.inner
+    }
 }
 
 impl<S, E> futures_util::stream::Stream for PhantomError<S, E>
@@ -90,6 +94,10 @@ impl Delay {
                 phantom: PhantomData,
             }),
         }
+    }
+
+    pub fn deadline(&self) -> Instant {
+        self.inner.get_ref().get().deadline()
     }
 
     pub fn reset(&mut self, deadline: Instant) {
