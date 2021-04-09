@@ -197,8 +197,7 @@ impl Runtime {
         let compat_sender2 = compat_sender.clone();
         let mut lock = compat_sender.write().unwrap();
 
-        let runtime = tokio_02::runtime::Builder::new()
-            .basic_scheduler()
+        let runtime = tokio_02::runtime::Builder::new_current_thread()
             .enable_all()
             .on_thread_start(move || {
                 // We need the threadpool's sender to set up the default tokio
@@ -445,7 +444,10 @@ impl Runtime {
         //let _reactor = reactor_01::set_default(compat.reactor());
         //let _timer = timer_02::timer::set_default(compat.timer());
         executor_01::with_default(&mut spawner, &mut enter, |_enter| {
-            Self::with_idle(idle, || inner.enter(f))
+            Self::with_idle(idle, || {
+                let _guard = inner.enter();
+                f()
+            })
         })
     }
 }

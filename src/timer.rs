@@ -6,17 +6,21 @@ use futures_util::stream::Stream;
 use std::marker::PhantomData;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use tokio_02::time::Delay as Delay2;
-use tokio_02::time::Interval as Interval2;
+use tokio_02::time::Sleep as Delay2;
+use tokio_stream::wrappers::IntervalStream;
 
 pub use tokio_02::time::Instant;
 pub use tokio_timer_02::Error;
 
 pub use crate::timeout::Timeout;
+use pin_project_lite::pin_project;
 
-struct PhantomError<S, E> {
-    phantom: PhantomData<fn() -> E>,
-    inner: S,
+pin_project! {
+    struct PhantomError<S, E> {
+        phantom: PhantomData<fn() -> E>,
+        #[pin]
+        inner: S,
+    }
 }
 
 impl<S, E> PhantomError<S, E> {
@@ -31,13 +35,13 @@ impl<S, E> PhantomError<S, E> {
 
 impl<S, E> futures_util::stream::Stream for PhantomError<S, E>
 where
-    S: Stream + Unpin,
+    S: Stream,
 {
     type Item = Result<S::Item, E>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> std::task::Poll<Option<Self::Item>> {
-        let inner = Pin::into_inner(self);
-        let stream = Pin::new(&mut inner.inner);
+        let this = self.project();
+        let stream = this.inner;
         match stream.poll_next(cx) {
             Poll::Pending => Poll::Pending,
             Poll::Ready(Some(val)) => Poll::Ready(Some(Ok(val))),
@@ -48,13 +52,13 @@ where
 
 impl<F, E> std::future::Future for PhantomError<F, E>
 where
-    F: std::future::Future + Unpin,
+    F: std::future::Future,
 {
     type Output = Result<F::Output, E>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> std::task::Poll<Self::Output> {
-        let inner = Pin::into_inner(self);
-        let stream = Pin::new(&mut inner.inner);
+        let this = self.project();
+        let stream = this.inner;
         match stream.poll(cx) {
             Poll::Pending => Poll::Pending,
             Poll::Ready(val) => Poll::Ready(Ok(val)),
@@ -62,12 +66,12 @@ where
     }
 }
 
-pub struct Interval(Compat<PhantomError<Interval2, tokio_timer_02::Error>>);
+pub struct Interval(Compat<PhantomError<IntervalStream, tokio_timer_02::Error>>);
 
 impl Interval {
     pub fn new_interval(duration: std::time::Duration) -> Self {
         Interval(Compat::new(PhantomError {
-            inner: tokio_02::time::interval(duration),
+            inner: IntervalStream::new(tokio_02::time::interval(duration)),
             phantom: PhantomData,
         }))
     }
@@ -83,14 +87,14 @@ impl Stream01 for Interval {
 }
 
 pub struct Delay {
-    inner: Compat<PhantomError<Delay2, tokio_timer_02::Error>>,
+    inner: Compat<PhantomError<Pin<Box<Delay2>>, tokio_timer_02::Error>>,
 }
 
 impl Delay {
     pub fn new(instant: Instant) -> Delay {
         Delay {
             inner: Compat::new(PhantomError {
-                inner: tokio_02::time::delay_until(instant),
+                inner: Box::pin(tokio_02::time::sleep_until(instant)),
                 phantom: PhantomData,
             }),
         }
@@ -101,7 +105,7 @@ impl Delay {
     }
 
     pub fn reset(&mut self, deadline: Instant) {
-        self.inner.get_mut().get_mut().reset(deadline)
+        self.inner.get_mut().get_mut().as_mut().reset(deadline);
     }
 }
 
