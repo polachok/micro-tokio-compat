@@ -6,8 +6,8 @@ use futures_util::stream::Stream;
 use std::marker::PhantomData;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use tokio_02::time::Delay as Delay2;
-use tokio_02::time::Interval as Interval2;
+use tokio_02::time::Sleep as Delay2;
+use tokio_stream::wrappers::IntervalStream;
 
 pub use tokio_02::time::Instant;
 pub use tokio_timer_02::Error;
@@ -62,12 +62,12 @@ where
     }
 }
 
-pub struct Interval(Compat<PhantomError<Interval2, tokio_timer_02::Error>>);
+pub struct Interval(Compat<PhantomError<IntervalStream, tokio_timer_02::Error>>);
 
 impl Interval {
     pub fn new_interval(duration: std::time::Duration) -> Self {
         Interval(Compat::new(PhantomError {
-            inner: tokio_02::time::interval(duration),
+            inner: IntervalStream::new(tokio_02::time::interval(duration)),
             phantom: PhantomData,
         }))
     }
@@ -83,14 +83,14 @@ impl Stream01 for Interval {
 }
 
 pub struct Delay {
-    inner: Compat<PhantomError<Delay2, tokio_timer_02::Error>>,
+    inner: Compat<PhantomError<Pin<Box<Delay2>>, tokio_timer_02::Error>>,
 }
 
 impl Delay {
     pub fn new(instant: Instant) -> Delay {
         Delay {
             inner: Compat::new(PhantomError {
-                inner: tokio_02::time::delay_until(instant),
+                inner: Box::pin(tokio_02::time::sleep_until(instant)),
                 phantom: PhantomData,
             }),
         }
@@ -101,7 +101,7 @@ impl Delay {
     }
 
     pub fn reset(&mut self, deadline: Instant) {
-        self.inner.get_mut().get_mut().reset(deadline)
+        self.inner.get_mut().get_mut().as_mut().reset(deadline)
     }
 }
 

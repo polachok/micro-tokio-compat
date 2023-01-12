@@ -176,6 +176,7 @@ impl Handle {
 #[derive(Debug)]
 #[cfg_attr(docsrs, doc(cfg(feature = "rt-current-thread")))]
 pub struct RunError {
+    #[allow(dead_code)]
     inner: (),
 }
 
@@ -197,8 +198,7 @@ impl Runtime {
         let compat_sender2 = compat_sender.clone();
         let mut lock = compat_sender.write().unwrap();
 
-        let runtime = tokio_02::runtime::Builder::new()
-            .basic_scheduler()
+        let runtime = tokio_02::runtime::Builder::new_current_thread()
             .enable_all()
             .on_thread_start(move || {
                 // We need the threadpool's sender to set up the default tokio
@@ -359,7 +359,7 @@ impl Runtime {
             ref idle,
             ..
         } = *self;
-        let mut spawner = compat::CompatSpawner::new(handle, &idle);
+        let mut spawner = compat::CompatSpawner::new(handle, idle);
         let mut enter = executor_01::enter().unwrap();
         // Set the default tokio 0.1 reactor to the background compat reactor.
         //let _reactor = reactor_01::set_default(compat.reactor());
@@ -381,7 +381,7 @@ impl Runtime {
             ref idle,
             ..
         } = *self;
-        let mut spawner = compat::CompatSpawner::new(handle, &idle);
+        let mut spawner = compat::CompatSpawner::new(handle, idle);
         let mut enter = executor_01::enter().unwrap();
         // Set the default tokio 0.1 reactor to the background compat reactor.
         //let _reactor = reactor_01::set_default(compat.reactor());
@@ -439,13 +439,16 @@ impl Runtime {
             ref idle,
             ..
         } = *self;
-        let mut spawner = compat::CompatSpawner::new(handle, &idle);
+        let mut spawner = compat::CompatSpawner::new(handle, idle);
         let mut enter = executor_01::enter().unwrap();
         // Set the default tokio 0.1 reactor to the background compat reactor.
         //let _reactor = reactor_01::set_default(compat.reactor());
         //let _timer = timer_02::timer::set_default(compat.timer());
         executor_01::with_default(&mut spawner, &mut enter, |_enter| {
-            Self::with_idle(idle, || inner.enter(f))
+            Self::with_idle(idle, || {
+                let _guard = inner.enter();
+                f()
+            })
         })
     }
 }
